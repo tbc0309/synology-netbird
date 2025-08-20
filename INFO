@@ -2,7 +2,7 @@ package="Netbird"
 version="0.55.0"
 description="A WireGuard-based mesh network that connects your devices into a single private network. ⚠️本套件将以root权限运行！"
 
-arch="apollolake avoton braswell broadwell broadwellnk broadwellnkv2 broadwellntbap bromolow cedarview denverton epyc7002 geminilake grantley kvmx64 purley r1000 v1000 v1000nk x86 x86_64"
+arch="apollolake avoton braswell broadwell broadwellnk broadwellnkv2 broadwellntbap bromolow cedarview denverton epyc7002 geminilake geminilakenk grantley kvmx64 purley r1000 r1000nk v1000 v1000nk x86 x86_64"
 maintainer="Netbird"
 maintainer_url="https://netbird.io/"
 distributor="矿神SPK7"
