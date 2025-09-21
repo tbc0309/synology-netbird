@@ -1,0 +1,111 @@
+name: release
+
+on:
+  repository_dispatch:
+    types:
+      - release
+  workflow_dispatch:
+#  schedule:
+#    - cron: '0 0 * * 0'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      update: ${{ env.update }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Init Env
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          sudo timedatectl set-timezone "Asia/Shanghai"
+  
+      - name: Check
+        run: |
+          REPO="netbirdio/netbird"
+          latesttag=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -sL https://api.github.com/repos/${REPO}/releases/latest | jq -r .tag_name)
+          localetag=$(grep "^version" INFO | sed "s/.*=\(.*\)/\1/")
+          if [ "\"${latesttag/v/}\"" != "${localetag}" ]; then
+            PKG_VERSION=${latesttag/v/}
+            PKG_HASH="$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -sL https://codeload.github.com/${REPO}/tar.gz/v${PKG_VERSION} | sha256sum | cut -d ' ' -f 1)"
+            sed -i "s/^version.*/version=\"${PKG_VERSION}\"/" INFO
+            sed -i "s/^changelog.*/changelog=\"Update to v${PKG_VERSION}, add iptables\"/" INFO
+            echo "package_version=$PKG_VERSION" >>$GITHUB_ENV
+          fi
+          
+      - name: Set update
+        id: set-update
+        run: |
+          git pull
+          status=$(git status -s | grep -E 'INFO' | awk '{printf " %s", $2}')
+          if [ -n "${status}" ]; then
+            git add INFO
+            git commit -m "update to $package_version $(date +%Y-%m-%d" "%H:%M:%S)"
+            git push -f
+            echo "update=true" >>$GITHUB_ENV
+          else
+            echo "update=false" >>$GITHUB_ENV
+          fi
+  
+  build:
+    name: Build - ${{ matrix.target.arch }}
+    needs: check
+    if: needs.check.outputs.update == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - arch: "arm"
+          - arch: "amd"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y bzip2 git wget tar
+          sudo systemctl daemon-reload
+          sudo apt -y autoremove --purge
+          sudo apt clean
+      - name: Build Package
+        run: |
+          git pull
+          if [ "${{ matrix.target.arch }}" == "arm" ]; then
+            sed -i "s/^arch.*/arch=\"rtd1296 rtd1619b armada37xx armv8\"/" INFO
+            rm -rf ./package/iptables
+            mv ./package/iptables-arm64 ./package/iptables
+          fi
+          mkdir -p ./package/bin
+          package_version=$(grep "^version" INFO | sed "s/.*=\(.*\)/\1/" | sed "s/\"//g")
+          wget -q -O - "https://github.com/netbirdio/netbird/releases/download/v${package_version}/netbird_${package_version}_linux_${{ matrix.target.arch }}64.tar.gz" | tar -xzf - -C ./package/bin
+          cd ./package
+          [ -d "./package/iptables-arm64" ] && rm -rf ./package/iptables-arm64
+          tar -czf package.tgz *
+          mv package.tgz ../
+          cd ../
+          rm -rf package
+          rm -rf *.spk
+          rm -rf README.md
+          tar -cvf Netbird-v${package_version}-${{ matrix.target.arch }}64-DSM7.spk *
+          echo "VERSION=v${package_version}" >>$GITHUB_ENV
+      - name: Upload to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbird-${{ matrix.target.arch }}
+          path: ./*.spk
+          if-no-files-found: error
+
+      - name: Upload firmware to release
+        uses: softprops/action-gh-release@v2
+        if: success() && !cancelled()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          files: |
+            ./*.spk

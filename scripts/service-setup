@@ -1,0 +1,48 @@
+### Generic variables and functions
+### -------------------------------
+
+if [ -z "${SYNOPKG_PKGNAME}" ] || [ -z "${SYNOPKG_DSM_VERSION_MAJOR}" ]; then
+  echo "Error: Environment variables are not set." 1>&2;
+  echo "Please run me using synopkg instead. Example: \"synopkg start [packagename]\"" 1>&2;
+  exit 1
+fi
+
+USER="Netbird"
+EFF_USER="Netbird"
+
+# start-stop-status script redirect stdout/stderr to LOG_FILE
+LOG_FILE="${SYNOPKG_PKGVAR}/${SYNOPKG_PKGNAME}.log"
+
+# Service command has to deliver its pid into PID_FILE
+PID_FILE="${SYNOPKG_PKGVAR}/${SYNOPKG_PKGNAME}.pid"
+
+
+### Package specific variables and functions
+### ----------------------------------------
+
+KEY_FILE="${SYNOPKG_PKGVAR}/url_key.json"
+CONFIG_FILE="${SYNOPKG_PKGVAR}/config.json"
+NETBIRD_URL=`synogetkeyvalue "${KEY_FILE}" NETBIRD_URL`
+NETBIRD_KEY=`synogetkeyvalue "${KEY_FILE}" NETBIRD_KEY`
+
+if [ ! -f "${CONFIG_FILE}" ]; then
+    if [ -n "${NETBIRD_URL}" ]; then
+        SERVICE_COMMAND="${SYNOPKG_PKGDEST}/bin/netbird up -F --config ${CONFIG_FILE} --log-level info --log-file ${LOG_FILE} -m ${NETBIRD_URL} -k ${NETBIRD_KEY}"
+    else
+        SERVICE_COMMAND="${SYNOPKG_PKGDEST}/bin/netbird up -F --config ${CONFIG_FILE} --log-level info --log-file ${LOG_FILE} -k ${NETBIRD_KEY}"
+    fi
+else
+    SERVICE_COMMAND="synosystemctl start pkg-netbird"
+fi
+
+SVC_BACKGROUND=y
+SVC_WRITE_PID=y
+
+service_postinst ()
+{
+    # Save url&key to file
+    if [ -n "${wizard_setup_key}" ]; then
+        echo "NETBIRD_URL=${wizard_url}" > ${KEY_FILE}
+        echo "NETBIRD_KEY=${wizard_setup_key}" >> ${KEY_FILE}
+    fi
+}
