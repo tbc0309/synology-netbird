@@ -82,7 +82,7 @@ jobs:
           fi
           mkdir -p ./package/bin
           package_version=$(grep "^version" INFO | sed "s/.*=\(.*\)/\1/" | sed "s/\"//g")
-          wget -q -O - "https://github.com/netbirdio/netbird/releases/download/v${package_version}/netbird_${package_version}_linux_${{ matrix.target.arch }}64.tar.gz" | tar -xzf - -C ./package/bin
+          wget -q -O - "https://github.com/netbirdio/netbird/releases/download/v${package_version}/netbird_${package_version}_linux_${{ matrix.target.arch }}64.tar.gz" | tar -xzf - --strip-components=1 -C ./package/bin --wildcards '*/netbird'
           [ -d "./package/iptables-arm64" ] && rm -rf ./package/iptables-arm64
           cd ./package
           tar -czf package.tgz *
