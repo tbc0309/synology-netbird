@@ -1,5 +1,5 @@
 package="Netbird"
-version="0.62.2"
+version="0.62.3"
 description="A WireGuard-based mesh network that connects your devices into a single private network. ⚠️本套件将以root权限运行！"
 
 arch="apollolake avoton braswell broadwell broadwellnk broadwellnkv2 broadwellntbap bromolow cedarview denverton epyc7002 geminilake geminilakenk grantley kvmx64 purley r1000 r1000nk v1000 v1000nk x86 x86_64"
@@ -10,4 +10,4 @@ distributor_url="https://spk7.imnks.com/"
 os_min_ver="7.1-42661"
 displayname="Netbird"
 dsmappname="SYNO.SDS.Netbird"
-changelog="Update to v0.62.2, add iptables"
+changelog="Update to v0.62.3, add iptables"
