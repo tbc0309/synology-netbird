@@ -2,6 +2,16 @@
 
 Synology [Netbird](https://github.com/netbirdio/netbird)
 
+## Automatic updates
+
+GitHub Actions checks the latest upstream NetBird release every day at 10:15
+Asia/Shanghai. When both amd64 and arm64 archives are available, it updates
+`INFO`, commits the new version, builds both DSM 7 SPK packages, and publishes
+them to the matching GitHub release.
+
+The workflow can also be started manually. Enable `force_build` to rebuild and
+replace the assets for the current version without changing `INFO`.
+
 package beta by [IMNKS.COM](https://imnks.com/9226.html)
 
 iptables from：https://github.com/RROrg/syno-iptables
