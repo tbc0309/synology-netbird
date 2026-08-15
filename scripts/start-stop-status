@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# 定义实际执行的脚本路径
+REAL_SCRIPT="/var/packages/${SYNOPKG_PKGNAME}/scripts/real-start-stop-status"
+
+if [ ! -d "/var/packages/SimplePermissionManager" ] || [ ! -e /usr/local/bin/spm-exec ] || [ "$(stat -c "%U %G %a" /usr/local/bin/spm-exec 2>/dev/null)" != "root root 6755" ]; then
+    # 如果SimplePermissionManager文件夹不存在，spm-exec不存在，或者spm-exec权限不正确，执行REAL_SCRIPT脚本
+    $REAL_SCRIPT $@
+    exit $?
+fi
+
+# 如果所有检查都通过，使用spm-exec提权执行real-start-stop-status脚本，并传递所有参数
+/usr/local/bin/spm-exec $REAL_SCRIPT $@
+
+# 获取执行结果，并退出
+exit $?

@@ -1,0 +1,6 @@
+{
+	"systemd-unit":{},
+	"usr-local-linker": {
+		"bin": ["bin/netbird"]
+	}
+}

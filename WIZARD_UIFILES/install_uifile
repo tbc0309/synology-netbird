@@ -1,0 +1,34 @@
+[
+    {
+        "step_title": "Netbird configuration",
+        "items": [
+            {
+                "type": "textfield",
+                "desc": "Management URL(Only for self-hosted version!!!)",
+                "subitems": [
+                    {
+                        "key": "wizard_url",
+                        "desc": "Management URL (Need https://)",
+                        "validator": {
+                            "allowBlank": true
+                        },
+                        "defaultValue": ""
+                    }
+                ]
+            },
+            {
+                "type": "textfield",
+                "desc": "Setup Key",
+                "subitems": [
+                    {
+                        "key": "wizard_setup_key",
+                        "desc": "Setup Key",
+                        "validator": {
+                            "allowBlank": false
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

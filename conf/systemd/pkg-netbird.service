@@ -1,0 +1,14 @@
+[Unit]
+Description=A WireGuard-based mesh network that connects your devices into a single private network.
+ConditionFileIsExecutable=/var/packages/Netbird/target/bin/netbird
+After=network.target syslog.target 
+
+[Service]
+StartLimitInterval=5
+StartLimitBurst=10
+ExecStart=/var/packages/Netbird/scripts/netbird-service
+Restart=always
+RestartSec=120
+
+[Install]
+WantedBy=multi-user.target
