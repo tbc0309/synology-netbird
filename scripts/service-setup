@@ -24,7 +24,7 @@ KEY_FILE="${SYNOPKG_PKGVAR}/url_key.json"
 CONFIG_FILE="${SYNOPKG_PKGVAR}/config.json"
 NETBIRD_URL=`synogetkeyvalue "${KEY_FILE}" NETBIRD_URL`
 NETBIRD_KEY=`synogetkeyvalue "${KEY_FILE}" NETBIRD_KEY`
-NETBIRD_SERVICE="/var/packages/${SYNOPKG_PKGNAME}/scripts/netbird-service"
+NETBIRD_SERVICE="/var/packages/${SYNOPKG_PKGNAME}/target/bin/netbird-service"
 
 if [ ! -f "${CONFIG_FILE}" ]; then
     if [ -n "${NETBIRD_URL}" ]; then
