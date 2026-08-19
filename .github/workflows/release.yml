@@ -125,6 +125,7 @@ jobs:
 
           archive=$(mktemp)
           mkdir -p package/bin
+          chmod +x package/bin/netbird-service
           curl --fail --silent --show-error --location --retry 3 \
             "https://github.com/netbirdio/netbird/releases/download/v${VERSION}/netbird_${VERSION}_linux_${ARCH}.tar.gz" \
             --output "${archive}"
