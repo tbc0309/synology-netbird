@@ -1,0 +1,130 @@
+#!/bin/sh
+
+NETBIRD="/var/packages/Netbird/target/bin/netbird"
+PKGVAR="/var/packages/Netbird/var"
+CONFIG_FILE="${PKGVAR}/config.json"
+LOG_FILE="${PKGVAR}/Netbird.log"
+MODE_FILE="${PKGVAR}/router-mode"
+SOCKET="/var/run/netbird.sock"
+CHECK_INTERVAL=15
+SETUP_KEY=""
+MANAGEMENT_URL=""
+CHILD_PID=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --setup-key)
+            SETUP_KEY="$2"
+            shift 2
+            ;;
+        --management-url)
+            MANAGEMENT_URL="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            exit 2
+            ;;
+    esac
+done
+
+cleanup_chains()
+{
+    for table in filter nat mangle; do
+        for chain in NETBIRD-RT-MSSCLAMP NETBIRD-RT-PRE NETBIRD-RT-NAT NETBIRD-RT-RDR NETBIRD-RT-FWD-IN NETBIRD-RT-FWD-OUT; do
+            iptables -t "${table}" -F "${chain}" >/dev/null 2>&1 || true
+            iptables -t "${table}" -X "${chain}" >/dev/null 2>&1 || true
+        done
+    done
+}
+
+stop_child()
+{
+    if [ -n "${CHILD_PID}" ] && kill -0 "${CHILD_PID}" >/dev/null 2>&1; then
+        kill -TERM "${CHILD_PID}" >/dev/null 2>&1 || true
+        wait "${CHILD_PID}" 2>/dev/null || true
+    fi
+    CHILD_PID=""
+    rm -f "${SOCKET}"
+    cleanup_chains
+}
+
+shutdown()
+{
+    stop_child
+    exit 0
+}
+
+trap shutdown TERM INT HUP
+
+start_child()
+{
+    MODE="$1"
+    rm -f "${SOCKET}"
+    if [ "${MODE}" = "netstack" ]; then
+        echo "Starting NetBird in automatic routing-peer netstack mode" >> "${LOG_FILE}"
+        NB_USE_NETSTACK_MODE=true "${NETBIRD}" service run \
+            --config "${CONFIG_FILE}" --log-level info --log-file "${LOG_FILE}" &
+    else
+        echo "Starting NetBird in standard TUN mode" >> "${LOG_FILE}"
+        "${NETBIRD}" service run \
+            --config "${CONFIG_FILE}" --log-level info --log-file "${LOG_FILE}" &
+    fi
+    CHILD_PID=$!
+}
+
+wait_for_daemon()
+{
+    count=20
+    while [ "${count}" -gt 0 ]; do
+        [ -S "${SOCKET}" ] && return 0
+        kill -0 "${CHILD_PID}" >/dev/null 2>&1 || return 1
+        count=$((count - 1))
+        sleep 1
+    done
+    return 1
+}
+
+enroll_peer()
+{
+    [ -n "${SETUP_KEY}" ] || return 0
+    if [ -n "${MANAGEMENT_URL}" ]; then
+        "${NETBIRD}" up --setup-key "${SETUP_KEY}" --management-url "${MANAGEMENT_URL}"
+    else
+        "${NETBIRD}" up --setup-key "${SETUP_KEY}"
+    fi
+}
+
+detect_mode()
+{
+    STATUS=$(timeout 8 "${NETBIRD}" status -d 2>/dev/null || true)
+    NETWORKS=$(printf '%s\n' "${STATUS}" | sed -n 's/^Networks:[[:space:]]*//p' | head -n 1)
+    if [ -n "${NETWORKS}" ] && [ "${NETWORKS}" != "-" ]; then
+        printf '%s\n' netstack
+    else
+        printf '%s\n' native
+    fi
+}
+
+MODE=native
+[ -f "${MODE_FILE}" ] && [ "$(cat "${MODE_FILE}" 2>/dev/null)" = "netstack" ] && MODE=netstack
+start_child "${MODE}"
+wait_for_daemon || exit 1
+enroll_peer || exit 1
+
+while kill -0 "${CHILD_PID}" >/dev/null 2>&1; do
+    sleep "${CHECK_INTERVAL}" &
+    wait $!
+    DESIRED_MODE=$(detect_mode)
+    if [ "${DESIRED_MODE}" != "${MODE}" ]; then
+        echo "NetBird mode change: ${MODE} -> ${DESIRED_MODE}" >> "${LOG_FILE}"
+        stop_child
+        MODE="${DESIRED_MODE}"
+        printf '%s\n' "${MODE}" > "${MODE_FILE}"
+        start_child "${MODE}"
+        wait_for_daemon || exit 1
+    fi
+done
+
+wait "${CHILD_PID}" 2>/dev/null
+exit $?
