@@ -160,9 +160,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.check.outputs.version }}
+          COMMIT: ${{ needs.check.outputs.commit }}
         shell: bash
         run: |
           set -euo pipefail
+          if gh api "repos/${GH_REPO}/git/ref/tags/v${VERSION}" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${GH_REPO}/git/refs/tags/v${VERSION}" \
+              -f sha="${COMMIT}" -F force=true >/dev/null
+          fi
           gh release view "v${VERSION}" >/dev/null 2>&1 || \
             gh release create "v${VERSION}" --title "NetBird v${VERSION}" \
               --notes "Automated Synology DSM 7 packages for NetBird v${VERSION}."
