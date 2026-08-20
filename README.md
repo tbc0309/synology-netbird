@@ -16,7 +16,7 @@ DSM 缺少 `libxt_mark.so` 时，NetBird 的原生 iptables 初始化会失败�
 
 套件的 `netbird-service` 会每 15 秒读取一次 `netbird status -d`：
 
-- `Networks: -`：以标准 TUN 模式运行，适合普通 Peer
+- `Networks: -`：保留标准 TUN，并强制使用 userspace firewall/router，避免 DSM 缺少 `libxt_mark.so` 时尝试创建不完整的 iptables 链
 - `Networks:` 包含网段：判定本机已被控制端指定为 Routing Peer 或 Exit Node，自动以 `NB_USE_NETSTACK_MODE=true` 重启
 - 路由角色被移除：自动恢复标准 TUN 模式
 

@@ -67,7 +67,8 @@ start_child()
             --config "${CONFIG_FILE}" --log-level info --log-file "${LOG_FILE}" &
     else
         echo "Starting NetBird in standard TUN mode" >> "${LOG_FILE}"
-        "${NETBIRD}" service run \
+        NB_FORCE_USERSPACE_FIREWALL=true NB_FORCE_USERSPACE_ROUTER=true \
+            "${NETBIRD}" service run \
             --config "${CONFIG_FILE}" --log-level info --log-file "${LOG_FILE}" &
     fi
     CHILD_PID=$!
